@@ -1,0 +1,9 @@
+*.swp
+*.swo
+*.pyc
+*.deb
+*.egg-info
+.vagrant
+.venv
+.ubuild.json
+Vagrantfile
