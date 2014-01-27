@@ -1,0 +1,10 @@
+{
+  "name": "ubuild",
+  "build_requires": [
+    "python-setuptools"
+  ],
+  "requires": [
+    "python-setuptools"
+  ],
+  "build_command": "python setup.py install"
+}
