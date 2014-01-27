@@ -1,6 +1,6 @@
 # ubuild
 
-Simple checkinstall based build script. To use in a project, simply include a .ubuild.json file in the project directory. That file should looks something like:
+This is a simple checkinstall based build script. To use in a project, simply include a .ubuild.json file in the project directory. That file should looks something like:
 
     {
         "name": "ubuild",
@@ -13,7 +13,9 @@ Simple checkinstall based build script. To use in a project, simply include a .u
         "build_command": "python setup.py install"
     }
 
-These are the currently supported options:
+This currently expects a Debian-based system with apt-get available.
+
+These are the currently supported options for the configuration file:
 
 * `name` is the name of the project, and used in the debian package.
 * `requires` is a list of system packages that the project depends on
@@ -34,4 +36,4 @@ After it has been installed, simply run:
 
 ...inside the project folder. Any failures will stop the build.
 
-This currently expects a Debian-based system with apt-get available.
+The only current option is `--version`, which allows you to provide at build time a version to be used. Be aware that using non-incrementing version numbers may break workflows that depend on autoupdating...
