@@ -17,6 +17,7 @@ class TestuBuild(unittest.TestCase):
         self._open_patcher = mock.patch("__builtin__.open")
         self._call_patcher = mock.patch("subprocess.call")
         self._args_patcher = mock.patch("optparse.OptionParser.parse_args")
+        self._exists_patcher = mock.patch("os.path.exists")
 
         self._mock_file = mock.MagicMock(spec=file)
         self._mock_file.__enter__.return_value.read.return_value = _FAKE_CONFIG
@@ -28,14 +29,19 @@ class TestuBuild(unittest.TestCase):
 
         self._mock_options = mock.Mock()
         self._mock_options.version = None
+        self._mock_options.config_file = None
 
         self._mock_args = self._args_patcher.start()
         self._mock_args.return_value = (self._mock_options, None)
+
+        self._mock_exists = self._exists_patcher.start()
+        self._mock_exists.return_value = True
 
     def tearDown(self):
         self._open_patcher.stop()
         self._call_patcher.stop()
         self._args_patcher.stop()
+        self._exists_patcher.stop()
 
     def test_main(self):
         self._mock_options.version = "1234"
@@ -66,3 +72,9 @@ class TestuBuild(unittest.TestCase):
                 return
 
         self.fail("No checkinstall command was run.")
+
+    def test_specified_config_file(self):
+        self._mock_options.config_file = "foo.json"
+        ubuild.main()
+
+        self._mock_open.assert_called_with("foo.json")
