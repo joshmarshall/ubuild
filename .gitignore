@@ -7,3 +7,6 @@
 .venv
 .ubuild.json
 Vagrantfile
+build/
+dist/
+pip-log.txt

@@ -3,11 +3,24 @@ import mock
 import ubuild
 import unittest
 
-_FAKE_CONFIG = """{
+_SIMPLE_CONFIG = """{
     "name": "foobar",
     "build_requires": ["package"],
     "requires": ["package"],
     "build_command": "make install"
+}"""
+
+
+_VIRTUALENV_CONFIG = """{
+    "name": "foojson",
+    "build_requires": ["libcurl"],
+    "requires": ["libcurl"],
+    "build_module": {
+        "name": "virtualenv",
+        "virtualenv_path": "/opt/venv/virtual",
+        "requirements": ["requirements.txt", "extra-reqs.txt"],
+        "requirements_params": ["--allow-all-external"]
+    }
 }"""
 
 
@@ -20,7 +33,7 @@ class TestuBuild(unittest.TestCase):
         self._exists_patcher = mock.patch("os.path.exists")
 
         self._mock_file = mock.MagicMock(spec=file)
-        self._mock_file.__enter__.return_value.read.return_value = _FAKE_CONFIG
+        self._set_config(_SIMPLE_CONFIG)
 
         self._mock_open = self._open_patcher.start()
         self._mock_open.return_value = self._mock_file
@@ -30,6 +43,7 @@ class TestuBuild(unittest.TestCase):
         self._mock_options = mock.Mock()
         self._mock_options.version = None
         self._mock_options.config_file = None
+        self._mock_options.build_module = False
 
         self._mock_args = self._args_patcher.start()
         self._mock_args.return_value = (self._mock_options, None)
@@ -43,20 +57,29 @@ class TestuBuild(unittest.TestCase):
         self._args_patcher.stop()
         self._exists_patcher.stop()
 
+    def _set_config(self, config):
+        self._mock_file.__enter__.return_value.read.return_value = config
+
+    def _assert_calls(self, expected_calls):
+        self.assertEqual(len(expected_calls), len(self._mock_call.mock_calls))
+        for i in range(len(expected_calls)):
+            self.assertEqual(
+                mock.call(expected_calls[i], shell=True),
+                self._mock_call.mock_calls[i])
+
     def test_main(self):
         self._mock_options.version = "1234"
 
         ubuild.main()
 
         self._mock_open.assert_called_with(".ubuild.json")
-        self._mock_call.assert_has_calls([
-            mock.call("apt-get update", shell=True),
-            mock.call(u"apt-get install -y checkinstall package", shell=True),
-            mock.call(
-                u"checkinstall --showinstall=no -y --requires='package' "
-                "--pkgname='foobar' --provides='foobar' --nodoc --deldoc=yes "
-                "--deldesc=yes --delspec=yes --pkgversion='1234' "
-                "make install", shell=True)
+        self._assert_calls([
+            "apt-get update",
+            "apt-get install -y checkinstall package",
+            "checkinstall --showinstall=no -y --requires='package' "
+            "--pkgname='foobar' --provides='foobar' --nodoc --deldoc=yes "
+            "--deldesc=yes --delspec=yes --pkgversion='1234' "
+            "make install"
         ])
 
     def test_default_version(self):
@@ -78,3 +101,39 @@ class TestuBuild(unittest.TestCase):
         ubuild.main()
 
         self._mock_open.assert_called_with("foo.json")
+
+    def test_virtualenv_module(self):
+        self._set_config(_VIRTUALENV_CONFIG)
+        self._mock_options.version = "1234"
+        self._mock_options.config_file = "foo.json"
+
+        ubuild.main()
+
+        self._assert_calls([
+            "apt-get update",
+            "apt-get install -y checkinstall libcurl python-dev "
+            "python-setuptools",
+            "easy_install pip",
+            "pip install virtualenv",
+            "checkinstall --showinstall=no -y --requires='libcurl' "
+            "--pkgname='foojson' --provides='foojson' --nodoc "
+            "--deldoc=yes --deldesc=yes --delspec=yes "
+            "--pkgversion='1234' ubuild.py --build_module --config=foo.json"
+        ])
+
+    def test_virtualenv_build(self):
+        self._set_config(_VIRTUALENV_CONFIG)
+        self._mock_options.build_module = True
+
+        ubuild.main()
+
+        self._assert_calls([
+            "mkdir -p /opt/venv",
+            "virtualenv /opt/venv/virtual --always-copy",
+            #"source /opt/venv/virtual/activate",
+            "/opt/venv/virtual/bin/pip install -r requirements.txt "
+            "--allow-all-external",
+            "/opt/venv/virtual/bin/pip install -r extra-reqs.txt "
+            "--allow-all-external",
+            "/opt/venv/virtual/bin/python setup.py install"
+        ])

@@ -11,12 +11,12 @@ DEFAULT_JSON_FILE = ".ubuild.json"
 
 
 def load_configuration(config_file):
-    config_file = config_file or DEFAULT_JSON_FILE
     if not os.path.exists(config_file):
         raise RuntimeError("Cannot find %s file." % (config_file))
     with open(config_file) as build_file:
         build_contents = build_file.read()
     build_config = json.loads(build_contents)
+    build_config["config_file"] = config_file
     return build_config
 
 
@@ -70,9 +70,28 @@ def main():
     option_parser.add_option(
         "-c", "--config", dest="config_file", default=None,
         help="use a specific config file instead of .ubuild.json")
-    options, _ = option_parser.parse_args()
+    option_parser.add_option(
+        "-m", "--build_module", dest="build_module", default=False,
+        action="store_true",
+        help="run build command for the module, if applicable")
 
-    config = load_configuration(options.config_file)
+    options, _ = option_parser.parse_args()
+    config_file = options.config_file or DEFAULT_JSON_FILE
+    config = load_configuration(config_file)
+
+    module_config = config.get("build_module")
+    module = None
+
+    if module_config:
+        print "Updating config for module '%s'..." % (module_config["name"])
+        module = _module_registry[module_config["name"]](module_config)
+        module.update_config(config)
+
+    if options.build_module:
+        # this is a default replacement for build_command, sets up venv
+        # and installs dependencies in a somewhat standard way.
+        return module.run_build()
+
     setup_system_requirements(config)
     version = options.version or get_version()
 
@@ -82,6 +101,9 @@ def main():
         call(pre_command)
         print "Finished running pre command."
         print "------------------------------"
+
+    if module:
+        module.prep_build()
 
     command = config["build_command"]
     run_checkinstall(
@@ -94,6 +116,44 @@ def main():
         call(post_command)
         print "Finished running post command."
         print "------------------------------"
+
+
+class _VirtualEnvFactory(object):
+
+    def __init__(self, module_config):
+        self._module_config = module_config
+        self._virtualenv_path = module_config["virtualenv_path"]
+        self._virtualenv_base = os.path.dirname(self._virtualenv_path)
+        self._requirement_paths = module_config.get("requirements", [])
+        self._requirement_args = " ".join(
+            module_config.get("requirements_params", []))
+
+    def update_config(self, config):
+        config["build_requires"] += ["python-dev", "python-setuptools"]
+        config.setdefault(
+            "build_command", "ubuild.py --build_module --config=%s" % (
+                config["config_file"]))
+
+    def prep_build(self):
+        # feels like this could be added another way... make pre_command
+        # a list instead?
+        call("easy_install pip")
+        call("pip install virtualenv")
+
+    def run_build(self):
+        call("mkdir -p %s" % (self._virtualenv_base))
+        call("virtualenv %s --always-copy" % (self._virtualenv_path))
+        #call("source %s/activate" % (self._virtualenv_path))
+        for requirement_path in self._requirement_paths:
+            call("%s/bin/pip install -r %s %s" % (
+                self._virtualenv_path, requirement_path,
+                self._requirement_args))
+        call("%s/bin/python setup.py install" % (self._virtualenv_path))
+
+
+_module_registry = {
+    "virtualenv": _VirtualEnvFactory
+}
 
 
 if __name__ == "__main__":
