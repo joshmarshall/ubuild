@@ -61,7 +61,7 @@ Right now, there is an optional virtualenv module that can be used to create, pr
 }
 ```
 
-The key item here is `build_module`, which has a set of configuration options specific to the module. In this case, `virtualenv_path` (which is required) tells ubuild where to create the new virtualenv. `requirements` is a list of PyPI dependencies, which is usually `requirements.txt` in Python projects. `requirements_args` are just additional parameters to pass to the `pip install -r %s` command, in this case allowing external packages through PyPI.
+The key item here is `build_module`, which has a set of configuration options specific to the module. In this case, `virtualenv_path` (which is required) tells ubuild where to create the new virtualenv. `requirements` is a list of PyPI dependencies, which is usually `requirements.txt` in Python projects. `requirements_args` are just additional parameters to pass to the `pip install -r %s` command, in this case allowing external packages through PyPI. If no outer `build_command` is provided, this module will run `$VENV_PATH/bin/python setup.py install`.
 
 As always, I welcome feedback, horror stories, or general internet poor behavior.
 
