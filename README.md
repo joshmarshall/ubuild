@@ -23,6 +23,7 @@ These are the currently supported options for the configuration file:
 * `pre_build_command` is a command to be run before building. It generally is used to set up the build environment, but not in any way that checkinstall should track (e.g. downloading non-system dependencies, building data files, etc.)
 * `build_command` is the command that installs the files to the appropriate locations on the system. Checkinstall will run this command, and track filesystem changes, so do not put any setup or cleanup actions in this command.
 * `post_build_command` is a command mostly for cleanup. It can also be used to push the debian file somewhere else if necessary.
+* `build_module` is an idea for allowing standard packing processes. Right now it just supports virtualenv (below)
 
 To run the build system, first install ubuild. This can be done by pulling down the project and running:
 
@@ -36,4 +37,8 @@ After it has been installed, simply run:
 
 ...inside the project folder. Any failures will stop the build.
 
-The only current option is `--version`, which allows you to provide at build time a version to be used. Be aware that using non-incrementing version numbers may break workflows that depend on autoupdating...
+The current command line options are:
+
+* `--version` which allows you to provide at build time a version to be used. Be aware that using non-incrementing version numbers may break workflows that depend on autoupdating...
+* `--config` which allows you to point to an alternate JSON file than the .ubuild.json default
+* `--build_module` which you will probably never use. This will be leveraged by modules who want to provide a default `build_command` operation, replacing the `make install` step, `python setup.py install`, etc.

@@ -118,7 +118,7 @@ def main():
         print "------------------------------"
 
 
-class _VirtualEnvFactory(object):
+class _VirtualEnvModule(object):
 
     def __init__(self, module_config):
         self._module_config = module_config
@@ -152,7 +152,7 @@ class _VirtualEnvFactory(object):
 
 
 _module_registry = {
-    "virtualenv": _VirtualEnvFactory
+    "virtualenv": _VirtualEnvModule
 }
 
 
