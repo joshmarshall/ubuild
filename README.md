@@ -42,3 +42,26 @@ The current command line options are:
 * `--version` which allows you to provide at build time a version to be used. Be aware that using non-incrementing version numbers may break workflows that depend on autoupdating...
 * `--config` which allows you to point to an alternate JSON file than the .ubuild.json default
 * `--build_module` which you will probably never use. This will be leveraged by modules who want to provide a default `build_command` operation, replacing the `make install` step, `python setup.py install`, etc.
+
+## Virtualenvs / Modules
+
+Right now, there is an optional virtualenv module that can be used to create, prep, and package a virtualenv into a .deb for deployment. An example file might look like:
+
+```
+{
+  "name": "ubuild",
+  "build_requires": ["python-setuptools"],
+  "requires": ["python-setuptools"],
+  "build_module": {
+    "name": "virtualenv",
+    "virtualenv_path": "/opt/ubuild/venv",
+    "requirements": ["requirements.txt"],
+    "requirements_args": ["--allow-all-external"]
+  }
+}
+```
+
+The key item here is `build_module`, which has a set of configuration options specific to the module. In this case, `virtualenv_path` (which is required) tells ubuild where to create the new virtualenv. `requirements` is a list of PyPI dependencies, which is usually `requirements.txt` in Python projects. `requirements_args` are just additional parameters to pass to the `pip install -r %s` command, in this case allowing external packages through PyPI.
+
+As always, I welcome feedback, horror stories, or general internet poor behavior.
+
