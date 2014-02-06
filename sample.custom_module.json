@@ -1,0 +1,8 @@
+{
+  "name": "thing",
+  "build_module": "foomodule",
+  "module_import": "foo.bar.modules",
+  "custom_config": {
+    "whatever: "I would like to do."
+  }
+}

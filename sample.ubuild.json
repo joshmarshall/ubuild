@@ -1,5 +1,6 @@
 {
   "name": "ubuild",
+  "build_module": "checkinstall",
   "build_requires": [
     "python-setuptools"
   ],
