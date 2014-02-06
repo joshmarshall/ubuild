@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/joshmarshall/ubuild.png?branch=master)](https://travis-ci.org/joshmarshall/ubuild)
 # ubuild
 
 This is a simple build project that aims to help standardize project package building. The "built-in" focus is around making single .deb files for a project, and it uses checkinstall to do this. (There is a virtualenv wrapper that helps specifically for Python projects.) However, the system itself is simple enough that most build processes should be able to leverage it.
