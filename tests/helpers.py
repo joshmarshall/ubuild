@@ -5,22 +5,35 @@ import unittest
 
 
 SIMPLE_CONFIG = {
-    "name": "foobar",
-    "build_module": "checkinstall",
-    "build_requires": ["package"],
-    "project_requires": ["package"],
-    "build_command": "make install"
+    "steps": [
+        {
+            "name": "checkinstall.prepare",
+            "build_requires": ["package"],
+        }, {
+            "name": "checkinstall.build",
+            "project_name": "foobar",
+            "project_requires": ["package"],
+            "build_command": "make install"
+        }
+    ]
 }
 
 
 VIRTUALENV_CONFIG = {
-    "name": "foojson",
-    "build_module": "virtualenv",
-    "build_requires": ["libcurl"],
-    "project_requires": ["libcurl"],
-    "virtualenv_path": "/opt/venv/virtual",
-    "requirements_files": ["requirements.txt", "extra-reqs.txt"],
-    "requirements_params": ["--allow-all-external"]
+    "steps": [
+        {
+            "name": "virtualenv.prepare",
+            "build_requires": ["libcurl"]
+        },
+        {
+            "name": "virtualenv.build",
+            "project_name": "foojson",
+            "project_requires": ["libcurl"],
+            "virtualenv_path": "/opt/venv/virtual",
+            "requirements_files": ["requirements.txt", "extra-reqs.txt"],
+            "requirements_params": ["--allow-all-external"]
+        }
+    ]
 }
 
 

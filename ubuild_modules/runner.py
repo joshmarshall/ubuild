@@ -4,13 +4,16 @@ import importlib
 import json
 import optparse
 import os
-import subprocess
 
-from ubuild_modules import registry
+from ubuild_modules import helpers
+from ubuild_modules.registry import Registry
 
 
 _DEFAULT_JSON_FILE = ".ubuild.json"
-_DEFAULT_BUILD_MODULE = "checkinstall"
+_DEFAULT_IMPORT_MODULES = [
+    "ubuild_modules.virtualenv_module",
+    "ubuild_modules.checkinstall_module"
+]
 
 
 def load_configuration(config_file):
@@ -21,13 +24,6 @@ def load_configuration(config_file):
     build_config = json.loads(build_contents)
 
     return build_config
-
-
-def call(command):
-    result = subprocess.call(command, shell=True)
-    if result != 0:
-        raise RuntimeError("Could not execute command (%d): %s" % (
-            result, command))
 
 
 def main():
@@ -47,18 +43,22 @@ def main():
     config_file = options.config_file or _DEFAULT_JSON_FILE
     config = load_configuration(config_file)
 
-    config["options.config"] = options.config_file
-    config["options.version"] = options.version
+    options = {
+        "options.config": options.config_file,
+        "options.version": options.version
+    }
 
-    extra_module_name = config.get("module_import")
-    if extra_module_name:
-        importlib.import_module(extra_module_name)
+    registry = Registry()
 
-    module = registry.create_module(config["build_module"], config)
+    import_modules = config.get("import_modules", [])
+    import_modules = set(import_modules + _DEFAULT_IMPORT_MODULES)
+    for module_name in import_modules:
+        module = importlib.import_module(module_name)
+        module.register(registry)
 
-    if options.build_module:
-        return module.build_as_standalone(call)
-
-    module.prep(call)
-    module.build(call)
-    module.cleanup(call)
+    context = {}
+    for step_configuration in config["steps"]:
+        step_name = step_configuration.pop("name")
+        step_configuration.update(options)
+        context = registry.execute(
+            step_name, context, step_configuration, helpers.execute)

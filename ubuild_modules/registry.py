@@ -1,18 +1,18 @@
-# built-ins...
-from ubuild_modules import checkinstall_module
-from ubuild_modules import virtualenv_module
+class Registry(object):
+
+    def __init__(self):
+        self._registry = {}
+
+    def register(self, module_name, module):
+        self._registry[module_name] = module
+
+    def execute(self, module_name, *args, **kwargs):
+        if module_name not in self._registry:
+            raise InvalidModule(
+                "Module '%s' is not registered" % (module_name))
+        return self._registry[module_name](*args, **kwargs)
 
 
-_MODULE_REGISTRY = {}
-
-
-def register_module(module_name, module):
-    _MODULE_REGISTRY[module_name] = module
-
-
-def create_module(module_name, module_configuration):
-    return _MODULE_REGISTRY[module_name](module_configuration)
-
-
-register_module("checkinstall", checkinstall_module.CheckinstallModule)
-register_module("virtualenv", virtualenv_module.VirtualEnvModule)
+class InvalidModule(Exception):
+    """Raised when registering or executing an invalid module."""
+    pass

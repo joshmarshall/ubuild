@@ -1,56 +1,69 @@
+import optparse
 import os
-from ubuild_modules import checkinstall_module
+from ubuild_modules import checkinstall_module as checkinstall
+from ubuild_modules import helpers
 
 
-class VirtualEnvModule(checkinstall_module.CheckinstallModule):
+def prepare_virtualenv(context, config, execute):
+    config.setdefault("build_requires", [])
+    config["build_requires"] += ["python-dev", "python-setuptools"]
+    result = checkinstall.prepare(context, config, execute)
+    execute("easy_install pip")
+    execute("pip install virtualenv")
+    return result
 
-    def __init__(self, config):
-        config.setdefault("build_requires", [])
-        config["build_requires"] += ["python-dev", "python-setuptools"]
 
-        # this is a bit hacky...
-        options = []
-        for config_name, config_value in config.items():
-            if config_name.startswith("options.") and config_value:
-                options.append(
-                    "--%s=%s" % (config_name[8:], config_value))
+def build_virtualenv(context, config, execute):
+    allow_external = config.get("allow_external_requirements", True)
+    requirements_paths = ",".join(config.get("requirements_files", []))
 
-        config.setdefault(
-            "build_command",
-            "ubuild --build_module %s" % " ".join(options))
+    options = {
+        "path": config["virtualenv_path"]
+    }
 
-        # intercepting requirements for checkinstall... this hints at the
-        # need for a signal / event system instead of tight coupling and
-        # construction order dependency...
+    if requirements_paths:
+        options["requirements"] = requirements_paths
+    if allow_external:
+        options["allow-external"] = ""
 
-        super(VirtualEnvModule, self).__init__(config)
+    options = ["--%s %s" % (name, value) for name, value in options.items()]
 
-        self._virtualenv_path = config["virtualenv_path"]
-        self._virtualenv_base = os.path.dirname(self._virtualenv_path)
-        self._requirement_paths = config.get("requirements_files", [])
-        self._requirement_args = " ".join(
-            config.get("requirements_params", []))
+    config.setdefault(
+        "command",
+        "python -m ubuild_modules.virtualenv_module %s" % " ".join(options))
+    return checkinstall.build(context, config, execute)
 
-    def prep(self, execute):
-        # do the normal checkinstall preparation...
-        super(VirtualEnvModule, self).prep(execute)
 
-        # ...and now set up python / virtualenv environment.
-        execute("easy_install pip")
-        execute("pip install virtualenv")
+def register(registry):
+    registry.register("virtualenv.prepare", prepare_virtualenv)
+    registry.register("virtualenv.build", build_virtualenv)
 
-    # We don't implement a `build` because checkinstall works fine as
-    # long as we override the build command (as above).
 
-    def build_as_standalone(self, execute):
-        # this is a default replacement for build_command, sets up venv
-        # and installs dependencies in a somewhat standard way.
+def main():
+    # this is a default replacement for build_command, sets up venv
+    # and installs dependencies in a somewhat standard way.
+    opt_parser = optparse.OptionParser()
+    opt_parser.add_option("-p", "--path", help="virtualenv path", dest="path")
+    opt_parser.add_option(
+        "-e", "--allow-external", help="allow external requirements",
+        action="store_true")
+    opt_parser.add_option(
+        "-r", "--requirements", dest="requirements", default=None,
+        help="comma-separated list of requirements files")
 
-        execute("mkdir -p %s" % (self._virtualenv_base))
-        execute("virtualenv %s --always-copy" % (self._virtualenv_path))
-        #execute("source %s/activate" % (self._virtualenv_path))
-        for requirement_path in self._requirement_paths:
-            execute("%s/bin/pip install -r %s %s" % (
-                self._virtualenv_path, requirement_path,
-                self._requirement_args))
-        execute("%s/bin/python setup.py install" % (self._virtualenv_path))
+    options, _ = opt_parser.parse_args()
+    virtualenv_base = os.path.dirname(options.path)
+
+    helpers.execute("mkdir -p %s" % (virtualenv_base))
+    helpers.execute("virtualenv %s --always-copy" % (options.path))
+    #execute("source %s/activate" % (self._path))
+    if options.requirements:
+        requirements = " ".join(
+            ["-r %s" % (r) for r in options.requirements.split(",")])
+        command = "%s/bin/pip install -I %s" % (
+            options.path, requirements)
+        if options.allow_external:
+            command += " --allow-all-external"
+        helpers.execute(command)
+    helpers.execute(
+        "%s/bin/python setup.py install" % (options.path))

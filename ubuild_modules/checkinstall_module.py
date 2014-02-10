@@ -1,58 +1,59 @@
+import logging
+
 from ubuild_modules import helpers
 
 
-class CheckinstallModule(object):
+_LOGGER = logging.getLogger("checkinstall-module")
 
-    def __init__(self, config):
-        self._name = config["name"]
-        self._version = config.get("options.version") or \
-            helpers.generate_datetime_version()
-        self._requires = config.get("project_requires", [])
-        self._build_requires = config.get("build_requires", [])
-        self._pre_command = config.get("pre_build_command")
-        self._build_command = config["build_command"]
-        self._post_command = config.get("post_build_command")
 
-    def prep(self, execute):
-        self._setup_system_requirements(execute)
-        if self._pre_command:
-            print "Running pre command..."
-            execute(self._pre_command)
-            print "Finished running pre command."
-            print "------------------------------"
+def prepare(context, config, execute):
+    build_requires = config.get("build_requires", [])
+    if "checkinstall" not in build_requires:
+        build_requires.insert(0, "checkinstall")
 
-    def build(self, execute):
-        replacements = {
-            "name": self._name,
-            "requires": ",".join(self._requires),
-            "version": self._version,
-            "command": self._build_command
-        }
+    _LOGGER.debug(
+        "Installing %d build requirements..." % (len(build_requires)))
+    execute("apt-get update")
+    execute("apt-get install -y %s" % (" ".join(build_requires)))
 
-        checkinstall_command = \
-            "checkinstall --showinstall=no -y --requires='%(requires)s' " \
-            "--pkgname='%(name)s' --provides='%(name)s' --nodoc " \
-            "--deldoc=yes --deldesc=yes --delspec=yes " \
-            "--pkgversion='%(version)s' %(command)s" % (replacements)
+    _LOGGER.debug("Finished installing build requirements.")
 
-        execute(checkinstall_command)
-        print "Finished running checkinstall."
-        print "------------------------------"
+    pre_command = config.get("command")
+    if pre_command:
+        _LOGGER.debug("Running pre command...")
+        execute(pre_command)
+        _LOGGER.debug("Finished running pre command.")
 
-    def cleanup(self, execute):
-        if self._post_command:
-            print "Running post command..."
-            execute(self._post_command)
-            print "Finished running post command."
-            print "------------------------------"
 
-    def _setup_system_requirements(self, execute):
-        if "checkinstall" not in self._build_requires:
-            self._build_requires.insert(0, "checkinstall")
+def build(context, config, execute):
+    version = config.get("options.version") or \
+        helpers.generate_datetime_version()
+    build_command = config.get("command", "make install")
+    replacements = {
+        "name": config["project_name"],
+        "requires": ",".join(config.get("project_requires", [])),
+        "version": version,
+        "command": build_command
+    }
 
-        print "Installing %d build requirements..." % (
-            len(self._build_requires))
-        execute("apt-get update")
-        execute("apt-get install -y %s" % (" ".join(self._build_requires)))
-        print "Finished installing build requirements."
-        print "---------------------------------------"
+    checkinstall_command = \
+        "checkinstall --showinstall=no -y --requires='%(requires)s' " \
+        "--pkgname='%(name)s' --provides='%(name)s' --nodoc " \
+        "--deldoc=yes --deldesc=yes --delspec=yes " \
+        "--pkgversion='%(version)s' %(command)s" % (replacements)
+
+    execute(checkinstall_command)
+    _LOGGER.debug("Finished running checkinstall.")
+
+
+def cleanup(context, config, execute):
+    command = config["command"]
+    _LOGGER.debug("Running cleanup...")
+    execute(command)
+    _LOGGER.debug("Finished running cleanup.")
+
+
+def register(registry):
+    registry.register("checkinstall.prepare", prepare)
+    registry.register("checkinstall.build", build)
+    registry.register("checkinstall.cleanup", cleanup)

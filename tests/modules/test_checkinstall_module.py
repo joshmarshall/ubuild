@@ -1,14 +1,11 @@
 import datetime
-import mock
-
 import ubuild_modules.runner
 from tests import helpers
 
 
 class TestuBuild(helpers.RunnerTestCase):
 
-    _ubuild_config = helpers.SIMPLE_CONFIG
-
+    @helpers.use_config(helpers.SIMPLE_CONFIG)
     @helpers.set_options(version="1234")
     def test_main(self):
         ubuild_modules.runner.main()
@@ -22,6 +19,7 @@ class TestuBuild(helpers.RunnerTestCase):
             "make install"
         ])
 
+    @helpers.use_config(helpers.SIMPLE_CONFIG)
     def test_default_version(self):
         ubuild_modules.runner.main()
         for name, args, kwargs in self.calls:
@@ -35,24 +33,8 @@ class TestuBuild(helpers.RunnerTestCase):
 
         self.fail("No checkinstall command was run.")
 
+    @helpers.use_config(helpers.SIMPLE_CONFIG)
     @helpers.set_options(config_file="foo.json")
     def test_specified_config_file(self):
         ubuild_modules.runner.main()
         self.assert_opened_config_file("foo.json")
-
-    @helpers.use_config({
-        "import_modules": ["foo.bar.modules"],
-        "steps": [{"name": "foo", "bar": "baz"}]
-    })
-    def test_import_module(self):
-        mock_function = mock.Mock()
-
-        def register(registry):
-            registry.register("foo", mock_function)
-
-        with mock.patch("importlib.import_module") as mock_import:
-            mock_import.return_value.register = register
-            ubuild_modules.runner.main()
-            mock_import.assert_called_with("foo.bar.modules")
-
-        self.assertTrue(mock_function.called)

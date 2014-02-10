@@ -5,82 +5,6 @@ This is a simple build project that aims to help standardize project package bui
 
 The idea is pretty simple: every project has a `.ubuild.json` file in the root. After installing this project (probably in a clean build environment), you simply run `ubuild` (maybe with some parameters) and at the other end you can do what you would like with the artifact(s).
 
-The following is a simple `.ubuild.json` example, using the built-in checkinstall module.
-
-    {
-      "name": "ubuild",
-      "build_module": "checkinstall",
-      "build_requires": ["lib-thingy","lib-build-dependency"]
-      "project_requires": ["lib-thingy"],
-      "build_command": "make install"
-    }
-
-This would result in a .deb file that you could push to a repo, secure storage, whatever, and use in deployment or additional build steps. (For instance, creating a Packer image, in the next example.)
-
-
-## Build Modules
-
-ubuild works by calling simple Python modules that can be provided by the user. (The CheckinstallModule and VirtualEnvModule are automatically available, and more will be added over time.) Let's say after you've updated one or more of your individual projects and created .deb files for each one, you want to build a Packer image (http://packer.io). You could write a module like:
-
-
-    from ubuild_modules import registry
-
-    class PackerModule(object):
-
-        def __init__(self, config):
-            self._aws_key = os.env["MY_AMAZON_KEY"]
-            self._aws_secret = os.env["MY_AMAZON_SECRET"]
-            self._packer_config_file = config["packer_file"]
-
-        def prep(self, execute):
-            # maybe you need to download environment variables,
-            # prep packer, etc. Could also be a no-op, like this
-            # example. Execute can be used for shell calls,
-            # just pass it a string.
-            pass
-
-        def build(self, execute):
-            execute(
-                "packer -var 'aws_access_key=%s' "
-                "-var 'aws_secret_key=%s' %s" % (
-                    self._aws_key, self._aws_secret,
-                    self._packer_config_file))
-
-        def cleanup(self, execute):
-            # ping a deploy service, delete extra files, whatever.
-            pass
-
-    registry.register_module("packer", PackerModule)
-
-At the end of this process there would be a new image in Amazon. If you wanted to parse the output of the system call programmatically, you can just use `subprocess.Popen` yourself and ignore the `execute` argument. A config file that used this might look like:
-
-    {
-      "module_import": "mymodules.packer_module",
-      "build_module": "packer",
-      "packer_file": "packer.json"
-    }
-
-We provide a `module_import` argument, which just needs to be an import to a Python file that calls `ubuild_modules.registry.register_module`. In this example, we put the actual code in the same file, but you could build out your own repository of ubuild modules that you install on your build machines, and have a single module that you import that registers all of them at once.
-
-So, in summary, do the following things:
-
-* Implement a class that has `prep`, `build`, and `cleanup` methods.
-* Call `ubuild_modules.registry.register_module` somewhere.
-* Provide a `module_import` in the `.ubuild.json` file that points where the module(s) are registered.
-
-
-## Checkinstall
-
-The checkinstall (and virtualenv) module currently expect a Debian-based system with apt-get available. These are the currently supported options for the checkinstall-based modules:
-
-* `name` is the name of the project, and used in the debian package.
-* `requires` is a list of system packages that the project depends on
-* `build_requires` is a list of system packages required for building the project
-* `pre_build_command` is a command to be run before building. It generally is used to set up the build environment, but not in any way that checkinstall should track (e.g. downloading non-system dependencies, building data files, etc.)
-* `build_command` is the command that installs the files to the appropriate locations on the system. Checkinstall will run this command, and track filesystem changes, so do not put any setup or cleanup actions in this command.
-* `post_build_command` is a command mostly for cleanup. It can also be used to push the debian file somewhere else if necessary, or even kick off deployment or other build jobs.
-* `build_module` is required for all configuration files, and should be `checkinstall` for building deb files.
-
 To run the build system, first install ubuild. This can be done by pulling down the project and running:
 
     sudo python setup.py install
@@ -93,11 +17,96 @@ After it has been installed, simply run:
 
 ...inside the project folder. Any failures will stop the build.
 
+The following is a simple `.ubuild.json` example, using the built-in checkinstall module.
+
+    {
+      "steps": [{
+        "name": "checkinstall.prepare",
+        "build_requires": ["lib-thingy","lib-build-dependency"]
+        "command": "make"
+      }, {
+        "name": "checkinstall.build",
+        "project_name": "my-project",
+        "project_requires": ["lib-thingy"],
+        "command": "make install"
+      }, {
+        "name": "checkinstall.cleanup",
+        "command": "make clean"
+      }]
+    }
+
+This would result in a .deb file that you could push to a repo, secure storage, whatever, and use in deployment or additional build steps. (For instance, creating a Packer image, in the next example.)
+
 The current command line options are:
 
 * `--version` which allows you to provide at build time a version to be used. Be aware that using non-incrementing version numbers may break workflows that depend on autoupdating...
 * `--config` which allows you to point to an alternate JSON file than the .ubuild.json default
-* `--build_module` which you will probably never use. This will be leveraged by modules who want to provide a default `build_as_standalone` operation, replacing the `make install` step, `python setup.py install`, etc.
+
+## Build Modules
+
+ubuild works by calling simple Python modules that can be provided by the user. (checkinstall and virtualenv are automatically available, and more will be added over time.) Let's say after you've updated one or more of your individual projects and created .deb files for each one, you want to build a Packer image (http://packer.io). You could write a module like:
+
+    import os
+
+    def build(context, config, execute):
+        # context is a shared dictionary across steps.
+        # config is the provided module configuration
+        # execute is a simple wrapper around subprocess.Popen
+        aws_key = os.env["MY_AMAZON_KEY"]
+        aws_secret = os.env["MY_AMAZON_SECRET"]
+        packer_config_file = config["packer_file"]
+        execute(
+            "packer -var 'aws_access_key=%s' "
+            "-var 'aws_secret_key=%s' %s" % (
+                self._aws_key, self._aws_secret,
+                self._packer_config_file))
+        # provide any information to pass on to other modules
+        context["packer.image"] = "my-new-image-id"
+
+    # all ubuild modules must have a 'register' function that
+    # takes a registry object.
+    def register(registry):
+        registry.register("packer.build", build)
+
+At the end of this process there would be a new image in Amazon. If you wanted to parse the output of the system call programmatically, you can just use `subprocess.Popen` yourself and ignore the `execute` argument. A config file that used this might look like:
+
+    {
+      "import_modules": ["mymodules.packer_module"],
+      "steps": [{
+        "name": "checkinstall.build",
+        ... build a deb, push it to a repo, etc ...
+      }, {
+        "name": "packer.build",
+        "packer_file": "packer.json"
+      }]
+    }
+
+We provide a `import_modules` argument, which is a list of one or importable modules that define a `register` function. In this example, we put the actual code in the same file, but you could build out your own repository of ubuild modules that you install on your build machines, and have a single module that you import that registers all of them at once for simplicity.
+
+So, in summary, do the following things:
+
+* Implement functions that take a `context`, `config`, and `execute`.
+* Implement a `register` function that accepts a `registry` argument, and call `registry.register` with the module name and callable to register your module(s).
+* Provide a `import_modules` list in the `.ubuild.json` file that points where the module(s) are registered.
+
+
+## Checkinstall
+
+The checkinstall (and virtualenv) module currently expect a Debian-based system with apt-get available. These are the currently supported options for the checkinstall-based modules:
+
+* Step `checkinstall.prepare`
+    * Installs the necessary system libraries to run checkinstall. Takes the following arguments:
+    * `build_requires`: a list of build dependencies to be install via apt-get
+    * `command`: an optional command to be run after the build dependencies are install
+* Step `checkinstall.build`
+    * Runs checkinstall with the appropriate arguments and the provided command. Takes the following arguments:
+    * `project_name`: the name of the project, used by the debian file
+    * `project_requires`: any optional system dependencies that should be required when installing the deb
+    * `command`: an optional command to be provided to checkinstall. If not specified, `make install` is the default.
+* Step `checkinstall.cleanup`
+    * Performs and follow-up actions.
+    * `command`: a command to be run after the build is complete.
+    * (not implemented yet: will automatically clean up build docs, etc.)
 
 
 ## Virtualenvs
@@ -105,14 +114,24 @@ The current command line options are:
 Using the virtualenv module might look like:
 
     {
-      "name": "ubuild",
-      "build_module": "virtualenv",
-      "virtualenv_path": "/opt/ubuild/venv",
-      "requirements_paths": ["requirements.txt"],
-      "requirements_args": ["--allow-all-external"]
+      "steps": [{
+        "name": "virtualenv.prepare",
+        "build_requires": ["libcurl4-openssl-dev"]
+      }, {
+        "name": "virtualenv.build",
+        "project_name": "foobar",
+        "virtualenv_path": "/opt/ubuild/venv",
+        "requirements_files": ["requirements.txt"],
+      }
     }
 
-We first set `build_module` to `virtualenv`. The other required argument is `virtualenv_path`, which tells ubuild where to create the new virtualenv. `requirements_paths` is a list of PyPI dependency files, which is usually one or more `requirements.txt` in Python projects. `requirements_args` are just additional parameters to pass to the `pip install -r %s` command, in this case allowing external packages through PyPI. If no outer `build_command` is provided, this module will run `$VENV_PATH/bin/python setup.py install`.
+These steps are extra wrappers to `checkinstall` based operations.
 
-
-As always, I welcome feedback, horror stories, or general internet anger.
+* Step `virtualenv.prepare`
+    * Wraps the checkinstall process, providing a few additional requirements. Takes the same options as `checkinstall.prepare`.
+* Step `virtualenv.build`
+    * Builds a virtualenv, installs the python dependencies, and installs the project, all through checkinstall.
+    * Takes the following arguments, in addition to `checkinstall.build` commands:
+    * `virtualenv_path`: the installed location of the virtualenv on the system
+    * `requirements_files`: list of requirements files to install to the virtualenv
+    * `command`: the optional command to pass to checkinstall. If none is provided, $VENV/bin/python setup.py install is used.
