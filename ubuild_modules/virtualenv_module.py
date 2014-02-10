@@ -67,3 +67,7 @@ def main():
         helpers.execute(command)
     helpers.execute(
         "%s/bin/python setup.py install" % (options.path))
+
+
+if __name__ == "__main__":
+    main()
