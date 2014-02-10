@@ -1,9 +1,10 @@
 {
-  "name": "ubuild",
-  "build_module": "virtualenv",
-  "build_requires": ["python-setuptools"],
-  "requires": ["python-setuptools"],
-  "virtualenv_path": "/opt/ubuild/venv",
-  "requirements": ["requirements.txt"],
-  "requirements_args": ["--allow-all-external"]
+  "steps": [{
+    "name": "virtualenv.prepare",
+    "build_requires": ["python-setuptools"]
+  }, {
+    "name": "virtualenv.build",
+    "virtualenv_path": "/opt/virtualenvs/project",
+    "project_name": "project"
+  }]
 }

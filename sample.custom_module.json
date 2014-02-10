@@ -1,8 +1,7 @@
 {
-  "name": "thing",
-  "build_module": "foomodule",
-  "module_import": "foo.bar.modules",
-  "custom_config": {
+  "import_modules": ["foo.bar.modules"],
+  "steps": [{
+    "name": "foomodule",
     "whatever: "I would like to do."
-  }
+  }]
 }

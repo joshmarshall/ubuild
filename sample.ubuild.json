@@ -1,11 +1,11 @@
 {
-  "name": "ubuild",
-  "build_module": "checkinstall",
-  "build_requires": [
-    "python-setuptools"
-  ],
-  "requires": [
-    "python-setuptools"
-  ],
-  "build_command": "python setup.py install"
+  "steps": [{
+    "name": "checkinstall.prepare",
+    "build_requires": ["python-setuptools"],
+  }, {
+    "name": "checkinstall.build",
+    "project_name": "ubuild",
+    "project_requires": ["python-setuptools"],
+    "command": "python setup.py install"
+  }]
 }
