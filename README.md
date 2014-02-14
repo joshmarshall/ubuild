@@ -1,15 +1,17 @@
 [![Build Status](https://travis-ci.org/joshmarshall/ubuild.png?branch=master)](https://travis-ci.org/joshmarshall/ubuild)
 # ubuild
 
-This is a simple build project that aims to help standardize project package building. The "built-in" focus is around making single .deb files for a project, and it uses checkinstall to do this. (There is a virtualenv wrapper that helps specifically for Python projects.) However, the system itself is simple enough that most build processes should be able to leverage it.
+STATUS: Toy project.
 
-The idea is pretty simple: every project has a `.ubuild.json` file in the root. After installing this project (probably in a clean build environment), you simply run `ubuild` (maybe with some parameters) and at the other end you can do what you would like with the artifact(s).
+This is a simple project that helps me build small projects / dependencies. The "built-in" focus is around making single .deb files for a project, and it uses checkinstall to do this. (There is a virtualenv wrapper that helps specifically for Python projects.)
+
+The idea is pretty simple: every project has a `.ubuild.json` file in the root. After installing this project (probably in a clean build environment), you simply run `ubuild` (maybe with some parameters) and at the other end you can do what you would like with the artifact(s). I usually shove the .deb up on a private HTTP server, and then deployment is as simple as "wget thing.db && dpkg -i thing.deb && apt-get install -f". (Environment variables / config would have been setup at server creation...)
 
 To run the build system, first install ubuild. This can be done by pulling down the project and running:
 
     sudo python setup.py install
 
-... or by installing a .deb of ubuild that has previously been built.
+... or by installing a .deb of ubuild that has previously been built. :)
 
 After it has been installed, simply run:
 
