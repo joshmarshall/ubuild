@@ -43,7 +43,7 @@ def main():
     config_file = options.config_file or _DEFAULT_JSON_FILE
     config = load_configuration(config_file)
 
-    options = {
+    extra_config = {
         "options.config": options.config_file,
         "options.version": options.version
     }
@@ -57,8 +57,9 @@ def main():
         module.register(registry)
 
     context = {}
+
     for step_configuration in config["steps"]:
         step_name = step_configuration.pop("name")
-        step_configuration.update(options)
-        context = registry.execute(
+        step_configuration.update(extra_config)
+        registry.execute(
             step_name, context, step_configuration, helpers.execute)

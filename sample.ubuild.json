@@ -1,11 +1,14 @@
 {
   "steps": [{
-    "name": "checkinstall.prepare",
-    "build_requires": ["python-setuptools"],
+    "name": "virtualenv.prepare"
   }, {
-    "name": "checkinstall.build",
+    "name": "virtualenv.build",
     "project_name": "ubuild",
-    "project_requires": ["python-setuptools"],
-    "command": "python setup.py install"
+    "virtualenv_path": "/opt/ubuild/venv"
+  }, {
+    "name": "checkinstall.cleanup",
+    "commands": [
+      "mv $C:CHECKINSTALL_DEB_PATH ubuild.deb"
+    ]
   }]
 }

@@ -1,4 +1,5 @@
 import logging
+import os
 
 from ubuild_modules import helpers
 
@@ -18,11 +19,9 @@ def prepare(context, config, execute):
 
     _LOGGER.debug("Finished installing build requirements.")
 
-    pre_command = config.get("command")
-    if pre_command:
-        _LOGGER.debug("Running pre command...")
-        execute(pre_command)
-        _LOGGER.debug("Finished running pre command.")
+    for command in config.get("commands", []):
+        command = helpers.update_command(context, command)
+        execute(command)
 
 
 def build(context, config, execute):
@@ -39,17 +38,38 @@ def build(context, config, execute):
     checkinstall_command = \
         "checkinstall --showinstall=no -y --requires='%(requires)s' " \
         "--pkgname='%(name)s' --provides='%(name)s' --nodoc " \
-        "--deldoc=yes --deldesc=yes --delspec=yes " \
+        "--deldoc=yes --deldesc=yes --delspec=yes --backup=no " \
         "--pkgversion='%(version)s' %(command)s" % (replacements)
 
-    execute(checkinstall_command)
+    stdout = execute(checkinstall_command)
+    path = None
+    check_row = False
+    for row in stdout.splitlines():
+        if "Done. The new package has been installed and saved to" in row:
+            check_row = True
+            continue
+
+        if not check_row:
+            continue
+
+        if "%s_%s" % (config["project_name"], version) in row:
+            path = row.strip()
+            context["checkinstall_deb_path"] = path
+            break
+
     _LOGGER.debug("Finished running checkinstall.")
 
 
 def cleanup(context, config, execute):
-    command = config["command"]
     _LOGGER.debug("Running cleanup...")
-    execute(command)
+
+    for command in config.get("commands", []):
+        command = helpers.update_command(context, command)
+        execute(command)
+
+    if os.path.exists(context["checkinstall_deb_path"]):
+        os.remove(context["checkinstall_deb_path"])
+
     _LOGGER.debug("Finished running cleanup.")
 
 
