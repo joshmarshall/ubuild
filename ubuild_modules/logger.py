@@ -7,7 +7,7 @@ FORMATTER = logging.Formatter(
 
 HANDLER = logging.StreamHandler(sys.stdout)
 HANDLER.setFormatter(FORMATTER)
-HANDLER.setLevel(logging.INFO)
 
-LOGGER = logging.getLogger("ubuild")
+LOGGER = logging.getLogger()
 LOGGER.addHandler(HANDLER)
+LOGGER.setLevel(logging.INFO)

@@ -1,4 +1,5 @@
 from datetime import datetime
+import sys
 # this is shlex.quote in 3.3
 from pipes import quote
 import os
@@ -20,7 +21,8 @@ def execute(command, *args, **kwargs):
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = []
     for line in iter(process.stdout.readline, ''):
-        print
+        sys.stdout.write("{}\n".format(line))
+        sys.stdout.flush()
         output.append(line)
 
     result = process.wait()
