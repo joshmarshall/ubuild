@@ -18,13 +18,18 @@ def execute(command, *args, **kwargs):
     LOGGER.info("Running command: {}".format(command))
     process = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = []
+    for line in iter(process.stdout.readline, ''):
+        print
+        output.append(line)
+
     result = process.wait()
-    stdout = process.stdout.read()
+    output = "\n".join(output)
     if result != 0:
         raise RuntimeError(
             "Could not execute command ({}): {}\n{}".format(
-                result, command, stdout))
-    return stdout
+                result, command, output))
+    return output
 
 
 def update_command(context, command):

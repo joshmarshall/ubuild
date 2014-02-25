@@ -129,7 +129,7 @@ class RunnerTestCase(unittest.TestCase):
             self.commands.append(command)
             result = mock.Mock()
             result.wait.return_value = 0
-            result.stdout.read.return_value = self.execute_output
+            result.stdout = StringIO(self.execute_output)
             return result
         with mock.patch("subprocess.Popen") as mock_popen:
             mock_popen.side_effect = capture

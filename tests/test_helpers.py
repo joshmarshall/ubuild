@@ -1,5 +1,6 @@
 from datetime import datetime
 import mock
+from StringIO import StringIO
 import subprocess
 import unittest
 
@@ -25,7 +26,7 @@ class TestHelpers(unittest.TestCase):
             self.assertEqual(subprocess.STDOUT, stderr)
             result = mock.Mock()
             result.wait.return_value = 0
-            result.stdout.read.return_value = "FOOBAR!"
+            result.stdout = StringIO("FOOBAR!")
             return result
 
         mock_popen.side_effect = side_effect
@@ -36,12 +37,14 @@ class TestHelpers(unittest.TestCase):
     @mock.patch("subprocess.Popen")
     def test_execute_fails(self, mock_popen):
         mock_popen.return_value.wait.return_value = 1
+        mock_popen.return_value.stdout = StringIO("")
         with self.assertRaises(RuntimeError):
             execute("whatever")
 
     @mock.patch("subprocess.Popen")
     def test_execute_escapes_quotes(self, mock_popen):
         mock_popen.return_value.wait.return_value = 0
+        mock_popen.return_value.stdout = StringIO("")
         execute("mycommand -a {arg} {}", "; rm;", arg="'quote tacular'")
         mock_popen.assert_called_with(
             "mycommand -a ''\"'\"'quote tacular'\"'\"'' '; rm;'",
