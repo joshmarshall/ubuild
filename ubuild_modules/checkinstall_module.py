@@ -31,15 +31,14 @@ def build(context, config, execute):
     replacements = {
         "build_name": config["project_name"],
         "build_requires": ",".join(config.get("project_requires", [])),
-        "build_version": version,
-        "build_command": build_command
+        "build_version": version
     }
 
     checkinstall_command = \
         "checkinstall --showinstall=no -y --requires={build_requires} " \
         "--pkgname={build_name} --provides={build_name} --nodoc " \
         "--deldoc=yes --deldesc=yes --delspec=yes --backup=no " \
-        "--pkgversion={build_version} {build_command}"
+        "--pkgversion={build_version} " + build_command
 
     stdout = execute(checkinstall_command, **replacements)
     path = None

@@ -44,7 +44,7 @@ class TestVirtualEnvModuleWithRunner(helpers.RunnerTestCase):
             "--pkgname=foojson --provides=foojson --nodoc "
             "--deldoc=yes --deldesc=yes --delspec=yes "
             "--backup=no --pkgversion=1234 "
-            "'/usr/bin/ubuild --config foobar.json'"
+            "/usr/bin/ubuild --config foobar.json"
         ])
 
     def test_virtualenv_build_with_download(self):

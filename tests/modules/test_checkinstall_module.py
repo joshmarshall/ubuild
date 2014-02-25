@@ -41,7 +41,7 @@ class TestuBuild(helpers.RunnerTestCase):
             "checkinstall --showinstall=no -y --requires=package "
             "--pkgname=foobar --provides=foobar --nodoc --deldoc=yes "
             "--deldesc=yes --delspec=yes --backup=no --pkgversion=1234 "
-            "'make install'"
+            "make install"
         ])
 
     @helpers.use_config(helpers.SIMPLE_CONFIG)
