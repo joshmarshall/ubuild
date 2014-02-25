@@ -21,7 +21,7 @@ def execute(command, *args, **kwargs):
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = []
     for line in iter(process.stdout.readline, ''):
-        sys.stdout.write("{}\n".format(line))
+        sys.stdout.write(line)
         sys.stdout.flush()
         output.append(line)
 

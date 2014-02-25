@@ -38,7 +38,7 @@ class TestuBuild(helpers.RunnerTestCase):
         self.assert_calls([
             "apt-get update",
             "apt-get install -y checkinstall package",
-            "checkinstall --showinstall=no -y --requires=package "
+            "checkinstall -y --requires=package "
             "--pkgname=foobar --provides=foobar --nodoc --deldoc=yes "
             "--deldesc=yes --delspec=yes --backup=no --pkgversion=1234 "
             "make install"

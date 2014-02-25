@@ -35,7 +35,7 @@ def build(context, config, execute):
     }
 
     checkinstall_command = \
-        "checkinstall --showinstall=no -y --requires={build_requires} " \
+        "checkinstall -y --requires={build_requires} " \
         "--pkgname={build_name} --provides={build_name} --nodoc " \
         "--deldoc=yes --deldesc=yes --delspec=yes --backup=no " \
         "--pkgversion={build_version} " + build_command

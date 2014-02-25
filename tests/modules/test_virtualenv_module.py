@@ -40,7 +40,7 @@ class TestVirtualEnvModuleWithRunner(helpers.RunnerTestCase):
             "python-setuptools",
             "easy_install pip",
             "pip install virtualenv",
-            "checkinstall --showinstall=no -y --requires=libcurl "
+            "checkinstall -y --requires=libcurl "
             "--pkgname=foojson --provides=foojson --nodoc "
             "--deldoc=yes --deldesc=yes --delspec=yes "
             "--backup=no --pkgversion=1234 "
