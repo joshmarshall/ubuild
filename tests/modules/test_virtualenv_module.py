@@ -94,3 +94,13 @@ class TestVirtualEnvModuleWithRunner(helpers.RunnerTestCase):
             "-r requirements.txt -r extra-reqs.txt --allow-all-external",
             "/opt/venv/virtual/bin/python setup.py install"
         ], self.commands)
+
+    def test_virtualenv_build_simple_requirements(self):
+        config = {
+            "virtualenv_path": "/opt/venv",
+            "project_name": "foobar",
+            "requirements_files": [],
+            "download_path": "/tmp/download"
+        }
+        virtualenv_module.build_virtualenv({}, config, self.execute)
+        self.assertTrue(True, "Executed without issue.")

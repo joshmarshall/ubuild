@@ -18,27 +18,29 @@ def prepare_virtualenv(context, config, execute):
 
 
 def build_virtualenv(context, config, execute):
+    requirements_params = config.get("requirements_params", [])
+    requirements_files = config.get("requirements_files", [])
+    virtualenv_path = config["virtualenv_path"]
+    download_path = config.get("download_path")
     single_step_config = {
         "steps": [{
             "name": "virtualenv.execute",
-            "virtualenv_path": config["virtualenv_path"],
-            "requirements_files": config.get("requirements_files", []),
-            "requirements_params": config.get("requirements_params", []),
-            "download_path": config.get("download_path", None)
+            "virtualenv_path": virtualenv_path,
+            "requirements_files": requirements_files,
+            "requirements_params": requirements_params,
+            "download_path": download_path
         }]
     }
 
-    if config.get("download_path"):
+    if download_path:
         # we will download the packages first, and then use --find-links to
         # reduce additional downloading for this box.
-        download_path = config["download_path"]
         execute("mkdir -p {}", download_path)
-        requirements = config.get("requirements_files", [])
         command = ["pip install --download {}"]
-        command += ["-r {}" for r in requirements]
-        command += [" ".join(config.get("requirements_params"))]
+        command += ["-r {}" for r in requirements_files]
+        command += [" ".join(requirements_params)]
         command = " ".join(command)
-        execute(command, download_path, *requirements)
+        execute(command, download_path, *requirements_files)
 
     with tempfile.NamedTemporaryFile() as temp_config:
         temp_config.write(json.dumps(single_step_config))
