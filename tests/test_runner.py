@@ -15,10 +15,10 @@ class TestuBuild(helpers.RunnerTestCase):
         self.assert_calls([
             "apt-get update",
             "apt-get install -y checkinstall package",
-            "checkinstall --showinstall=no -y --requires='package' "
-            "--pkgname='foobar' --provides='foobar' --nodoc --deldoc=yes "
-            "--deldesc=yes --delspec=yes --backup=no --pkgversion='1234' "
-            "make install"
+            "checkinstall --showinstall=no -y --requires=package "
+            "--pkgname=foobar --provides=foobar --nodoc --deldoc=yes "
+            "--deldesc=yes --delspec=yes --backup=no --pkgversion=1234 "
+            "'make install'"
         ])
 
     @helpers.use_config(helpers.SIMPLE_CONFIG)
@@ -27,7 +27,7 @@ class TestuBuild(helpers.RunnerTestCase):
         for name, args, kwargs in self.calls:
             if args[0].startswith("checkinstall"):
                 now = datetime.datetime.utcnow().strftime("%Y%m%d.%H%M%S")
-                expected_version = "--pkgversion='%s'" % (now)
+                expected_version = "--pkgversion={}".format(now)
                 self.assertTrue(
                     expected_version in args[0],
                     "the version should default to a datetime string.")

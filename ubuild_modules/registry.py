@@ -9,7 +9,7 @@ class Registry(object):
     def execute(self, module_name, *args, **kwargs):
         if module_name not in self._registry:
             raise InvalidModule(
-                "Module '%s' is not registered" % (module_name))
+                "Module '{}' is not registered".format(module_name))
         return self._registry[module_name](*args, **kwargs)
 
 

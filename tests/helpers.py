@@ -4,6 +4,7 @@ import mock
 from StringIO import StringIO
 import subprocess
 import unittest
+from ubuild_modules.helpers import execute
 
 
 SIMPLE_CONFIG = {
@@ -94,6 +95,8 @@ class RunnerTestCase(unittest.TestCase):
 
     def setUp(self):
         super(RunnerTestCase, self).setUp()
+        self.commands = []
+        self.execute_output = "MOCK OUTPUT"
         # this should probably be deconstructed into multiple mixins...
         self._popen_patcher = mock.patch("subprocess.Popen")
         self._args_patcher = mock.patch("optparse.OptionParser.parse_args")
@@ -120,6 +123,17 @@ class RunnerTestCase(unittest.TestCase):
         self._popen_patcher.stop()
         self._args_patcher.stop()
         self._exists_patcher.stop()
+
+    def execute(self, command, *args, **kwargs):
+        def capture(command, *cargs, **ckwargs):
+            self.commands.append(command)
+            result = mock.Mock()
+            result.wait.return_value = 0
+            result.stdout.read.return_value = self.execute_output
+            return result
+        with mock.patch("subprocess.Popen") as mock_popen:
+            mock_popen.side_effect = capture
+            return execute(command, *args, **kwargs)
 
     def assert_calls(self, expected_calls):
         self.assertEqual(len(expected_calls), len(self._mock_popen.mock_calls))

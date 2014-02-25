@@ -1,10 +1,7 @@
-import logging
 import os
 
 from ubuild_modules import helpers
-
-
-_LOGGER = logging.getLogger("checkinstall-module")
+from ubuild_modules.logger import LOGGER
 
 
 def prepare(context, config, execute):
@@ -12,12 +9,15 @@ def prepare(context, config, execute):
     if "checkinstall" not in build_requires:
         build_requires.insert(0, "checkinstall")
 
-    _LOGGER.debug(
-        "Installing %d build requirements..." % (len(build_requires)))
-    execute("apt-get update")
-    execute("apt-get install -y %s" % (" ".join(build_requires)))
+    LOGGER.debug(
+        "Installing {} build requirements...".format(len(build_requires)))
+    if build_requires:
+        execute("apt-get update")
+        command = "apt-get install -y " + " ".join(map(
+            lambda x: "{}", build_requires))
+        execute(command, *build_requires)
 
-    _LOGGER.debug("Finished installing build requirements.")
+    LOGGER.debug("Finished installing build requirements.")
 
     for command in config.get("commands", []):
         command = helpers.update_command(context, command)
@@ -29,19 +29,19 @@ def build(context, config, execute):
         helpers.generate_datetime_version()
     build_command = config.get("command", "make install")
     replacements = {
-        "name": config["project_name"],
-        "requires": ",".join(config.get("project_requires", [])),
-        "version": version,
-        "command": build_command
+        "build_name": config["project_name"],
+        "build_requires": ",".join(config.get("project_requires", [])),
+        "build_version": version,
+        "build_command": build_command
     }
 
     checkinstall_command = \
-        "checkinstall --showinstall=no -y --requires='%(requires)s' " \
-        "--pkgname='%(name)s' --provides='%(name)s' --nodoc " \
+        "checkinstall --showinstall=no -y --requires={build_requires} " \
+        "--pkgname={build_name} --provides={build_name} --nodoc " \
         "--deldoc=yes --deldesc=yes --delspec=yes --backup=no " \
-        "--pkgversion='%(version)s' %(command)s" % (replacements)
+        "--pkgversion={build_version} {build_command}"
 
-    stdout = execute(checkinstall_command)
+    stdout = execute(checkinstall_command, **replacements)
     path = None
     check_row = False
     for row in stdout.splitlines():
@@ -52,16 +52,16 @@ def build(context, config, execute):
         if not check_row:
             continue
 
-        if "%s_%s" % (config["project_name"], version) in row:
+        if "{}_{}".format(config["project_name"], version) in row:
             path = row.strip()
             context["checkinstall_deb_path"] = path
             break
 
-    _LOGGER.debug("Finished running checkinstall.")
+    LOGGER.debug("Finished running checkinstall.")
 
 
 def cleanup(context, config, execute):
-    _LOGGER.debug("Running cleanup...")
+    LOGGER.debug("Running cleanup...")
 
     for command in config.get("commands", []):
         command = helpers.update_command(context, command)
@@ -70,7 +70,7 @@ def cleanup(context, config, execute):
     if os.path.exists(context["checkinstall_deb_path"]):
         os.remove(context["checkinstall_deb_path"])
 
-    _LOGGER.debug("Finished running cleanup.")
+    LOGGER.debug("Finished running cleanup.")
 
 
 def register(registry):

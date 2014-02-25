@@ -18,7 +18,7 @@ _DEFAULT_IMPORT_MODULES = [
 
 def load_configuration(config_file):
     if not os.path.exists(config_file):
-        raise RuntimeError("Cannot find %s file." % (config_file))
+        raise RuntimeError("Cannot find {} file.".format(config_file))
     with open(config_file) as build_file:
         build_contents = build_file.read()
     build_config = json.loads(build_contents)

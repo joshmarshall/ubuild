@@ -39,6 +39,14 @@ class TestHelpers(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             execute("whatever")
 
+    @mock.patch("subprocess.Popen")
+    def test_execute_escapes_quotes(self, mock_popen):
+        mock_popen.return_value.wait.return_value = 0
+        execute("mycommand -a {arg} {}", "; rm;", arg="'quote tacular'")
+        mock_popen.assert_called_with(
+            "mycommand -a ''\"'\"'quote tacular'\"'\"'' '; rm;'",
+            shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
     @mock.patch.dict("os.environ", {"PATH": "/tmp"})
     def test_update_command(self):
         context = {"foo": "bar", "bar": "baz"}

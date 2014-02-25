@@ -17,7 +17,8 @@ class TestVirtualEnvModuleWithRunner(helpers.RunnerTestCase):
                 "name": "virtualenv.execute",
                 "virtualenv_path": "/opt/venv/virtual",
                 "requirements_files": ["requirements.txt", "extra-reqs.txt"],
-                "requirements_params": ["--allow-all-external"]
+                "requirements_params": ["--allow-all-external"],
+                "download_path": None
             }]
         })
 
@@ -39,12 +40,44 @@ class TestVirtualEnvModuleWithRunner(helpers.RunnerTestCase):
             "python-setuptools",
             "easy_install pip",
             "pip install virtualenv",
-            "checkinstall --showinstall=no -y --requires='libcurl' "
-            "--pkgname='foojson' --provides='foojson' --nodoc "
+            "checkinstall --showinstall=no -y --requires=libcurl "
+            "--pkgname=foojson --provides=foojson --nodoc "
             "--deldoc=yes --deldesc=yes --delspec=yes "
-            "--backup=no --pkgversion='1234' "
-            "/usr/bin/ubuild --config 'foobar.json'"
+            "--backup=no --pkgversion=1234 "
+            "'/usr/bin/ubuild --config foobar.json'"
         ])
+
+    def test_virtualenv_build_with_download(self):
+        config = {
+            "project_name": "ubuild",
+            "virtualenv_path": "/opt/venv/virtual",
+            "requirements_files": ["foo.txt", "bar.txt"],
+            "requirements_params": ["--allow-all-external"],
+            "download_path": "/tmp/download"
+        }
+
+        virtualenv_module.build_virtualenv({}, config, self.execute)
+
+        # make sure the last command is checkinstall...
+        self.assertTrue(self.commands.pop(-1).startswith("checkinstall "))
+
+        self.assertEqual([
+            "mkdir -p /tmp/download",
+            "pip install --download /tmp/download -r foo.txt -r bar.txt "
+            "--allow-all-external"
+        ], self.commands)
+
+        self.commands = []
+        virtualenv_module.execute_virtualenv({}, config, self.execute)
+
+        self.assertEqual([
+            "mkdir -p /opt/venv",
+            "virtualenv /opt/venv/virtual --always-copy",
+            "/opt/venv/virtual/bin/pip install -I --no-index "
+            "--find-links file:///tmp/download -r foo.txt -r bar.txt "
+            "--allow-all-external",
+            "/opt/venv/virtual/bin/python setup.py install"
+        ], self.commands)
 
     def test_virtualenv_build(self):
         config = {
@@ -53,17 +86,11 @@ class TestVirtualEnvModuleWithRunner(helpers.RunnerTestCase):
             "requirements_params": ["--allow-all-external"]
         }
 
-        commands = []
-
-        def execute(command):
-            commands.append(command)
-
-        virtualenv_module.execute_virtualenv({}, config, execute)
+        virtualenv_module.execute_virtualenv({}, config, self.execute)
         self.assertEqual([
             "mkdir -p /opt/venv",
             "virtualenv /opt/venv/virtual --always-copy",
-            #"source /opt/venv/virtual/activate",
             "/opt/venv/virtual/bin/pip install -I "
             "-r requirements.txt -r extra-reqs.txt --allow-all-external",
             "/opt/venv/virtual/bin/python setup.py install"
-        ], commands)
+        ], self.commands)

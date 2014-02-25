@@ -38,10 +38,10 @@ class TestuBuild(helpers.RunnerTestCase):
         self.assert_calls([
             "apt-get update",
             "apt-get install -y checkinstall package",
-            "checkinstall --showinstall=no -y --requires='package' "
-            "--pkgname='foobar' --provides='foobar' --nodoc --deldoc=yes "
-            "--deldesc=yes --delspec=yes --backup=no --pkgversion='1234' "
-            "make install"
+            "checkinstall --showinstall=no -y --requires=package "
+            "--pkgname=foobar --provides=foobar --nodoc --deldoc=yes "
+            "--deldesc=yes --delspec=yes --backup=no --pkgversion=1234 "
+            "'make install'"
         ])
 
     @helpers.use_config(helpers.SIMPLE_CONFIG)
@@ -50,7 +50,7 @@ class TestuBuild(helpers.RunnerTestCase):
         for name, args, kwargs in self.calls:
             if args[0].startswith("checkinstall"):
                 now = datetime.datetime.utcnow().strftime("%Y%m%d.%H%M%S")
-                expected_version = "--pkgversion='%s'" % (now)
+                expected_version = "--pkgversion={}".format(now)
                 self.assertTrue(
                     expected_version in args[0],
                     "the version should default to a datetime string.")
@@ -72,10 +72,10 @@ class TestuBuild(helpers.RunnerTestCase):
             "project_name": "ubuild"
         }
 
-        def execute(*args, **kwargs):
-            return SUCCESSFUL_OUTPUT
+        self.execute_output = SUCCESSFUL_OUTPUT
 
-        ubuild_modules.checkinstall_module.build(context, config, execute)
+        ubuild_modules.checkinstall_module.build(
+            context, config, self.execute)
         self.assertTrue("checkinstall_deb_path" in context)
         self.assertEqual(
             "/vagrant/ubuild_20140222.101742-1_amd64.deb",
@@ -95,13 +95,9 @@ class TestuBuild(helpers.RunnerTestCase):
             "commands": ["mv $C:CHECKINSTALL_DEB_PATH foo.deb"]
         }
 
-        commands = []
-
-        def execute(command):
-            commands.append(command)
-
-        ubuild_modules.checkinstall_module.cleanup(context, config, execute)
+        ubuild_modules.checkinstall_module.cleanup(
+            context, config, self.execute)
         mock_exists.assert_called_with("/what/foobar.deb")
         mock_remove.assert_called_with("/what/foobar.deb")
 
-        self.assertEqual(["mv /what/foobar.deb foo.deb"], commands)
+        self.assertEqual(["mv /what/foobar.deb foo.deb"], self.commands)
